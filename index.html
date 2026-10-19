@@ -1,0 +1,1803 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark light" />
+<meta name="theme-color" content="#0a0c11" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="价尺" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<meta name="description" content="粘贴淘宝 / 天猫 / 京东 / 拼多多链接，查看历史价格曲线、历史最低价、价格波动幅度与入手建议。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2343e0b0'/%3E%3Cpath d='M6 22l5-6 4 3 5-7 4 4' stroke='%23071a14' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<title>价尺 PriceLens · 历史价格与波动幅度</title>
+<style>
+/* ---------------- tokens ---------------- */
+:root{
+  --bg:#0a0c11;
+  --bg2:#0f1218;
+  --card:#141822;
+  --card2:#1a1f2b;
+  --line:rgba(255,255,255,.075);
+  --line-strong:rgba(255,255,255,.15);
+  --fg:#eef2f8;
+  --fg2:#9aa4b8;
+  --fg3:#6b7488;
+  --mint:#43e0b0;
+  --mint-soft:rgba(67,224,176,.13);
+  --amber:#ffb86b;
+  --amber-soft:rgba(255,184,107,.13);
+  --red:#ff6f6f;
+  --red-soft:rgba(255,111,111,.13);
+  --violet:#a78bfa;
+  --blue:#5aa9ff;
+  --radius:20px;
+  --shadow-card:0 1px 0 rgba(255,255,255,.04) inset, 0 12px 30px rgba(0,0,0,.28);
+  --safe-b:env(safe-area-inset-bottom, 0px);
+}
+[data-theme="light"]{
+  --bg:#eef1f7;
+  --bg2:#e6eaf3;
+  --card:#ffffff;
+  --card2:#f4f6fb;
+  --line:rgba(15,23,42,.075);
+  --line-strong:rgba(15,23,42,.16);
+  --fg:#0d1526;
+  --fg2:#586074;
+  --fg3:#8a92a5;
+  --mint:#0e9e77;
+  --mint-soft:rgba(14,158,119,.10);
+  --amber:#b26b00;
+  --amber-soft:rgba(178,107,0,.10);
+  --red:#d14a4a;
+  --red-soft:rgba(209,74,74,.10);
+  --violet:#7b5cf0;
+  --blue:#2b7fe0;
+  --shadow-card:0 1px 2px rgba(15,23,42,.04), 0 12px 26px rgba(15,23,42,.07);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{overscroll-behavior:none}
+html{background:#06070a}
+[data-theme="light"] html{background:#e9edf5}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",sans-serif;
+  color:var(--fg);
+  background:#06070a;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  font-size:14px;
+  -webkit-font-smoothing:antialiased;
+}
+[data-theme="light"] body{background:#e9edf5}
+body::before{
+  content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(38% 34% at 22% 8%, rgba(67,224,176,.16), transparent 70%),
+    radial-gradient(42% 38% at 82% 92%, rgba(167,139,250,.16), transparent 70%),
+    radial-gradient(30% 30% at 96% 4%, rgba(90,169,255,.10), transparent 70%);
+  filter:blur(18px);
+}
+[data-theme="light"] body::before{
+  background:
+    radial-gradient(38% 34% at 22% 8%, rgba(14,158,119,.16), transparent 70%),
+    radial-gradient(42% 38% at 82% 92%, rgba(123,92,240,.14), transparent 70%);
+}
+.stage{position:relative;z-index:1;width:100%;height:100%;display:grid;place-items:center}
+.phone{
+  position:relative;display:flex;flex-direction:column;overflow:hidden;
+  width:100%;max-width:430px;height:100vh;height:100dvh;
+  background:
+    radial-gradient(120% 55% at 88% -12%, rgba(67,224,176,.10), transparent 62%),
+    radial-gradient(100% 45% at -10% 106%, rgba(167,139,250,.10), transparent 62%),
+    var(--bg);
+  color:var(--fg);
+}
+[data-theme="light"] .phone{
+  background:
+    radial-gradient(120% 55% at 88% -12%, rgba(14,158,119,.10), transparent 62%),
+    radial-gradient(100% 45% at -10% 106%, rgba(123,92,240,.08), transparent 62%),
+    var(--bg);
+}
+@media (min-width:600px){
+  .phone{
+    height:min(900px, calc(100dvh - 36px));
+    border-radius:44px;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 50px 120px rgba(0,0,0,.65), 0 0 0 10px rgba(255,255,255,.025);
+  }
+  [data-theme="light"] .phone{box-shadow:0 50px 110px rgba(15,23,42,.22), 0 0 0 10px rgba(255,255,255,.6)}
+}
+
+/* ---------------- status bar ---------------- */
+.statusbar{
+  flex:0 0 auto;height:30px;display:flex;align-items:center;justify-content:space-between;
+  padding:2px 24px 0;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--fg);
+  font-variant-numeric:tabular-nums;
+}
+.sb-right{display:flex;align-items:center;gap:6px;opacity:.9}
+.sb-right svg{display:block;fill:currentColor}
+@media (max-width:599px){ .statusbar{display:none} }
+
+/* ---------------- top bar ---------------- */
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:calc(6px + env(safe-area-inset-top, 0px)) 20px 10px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{
+  width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:#04120d;
+  background:linear-gradient(140deg,#5cf0c2,#25c9a4 55%,#8de9ff);
+  box-shadow:0 6px 16px rgba(67,224,176,.28), inset 0 1px 0 rgba(255,255,255,.45);
+}
+[data-theme="light"] .logo{color:#fff;background:linear-gradient(140deg,#12b98e,#0b9877 55%,#3fc4d8)}
+.brand-txt{display:flex;flex-direction:column;line-height:1.05}
+.brand-txt strong{font-size:16px;letter-spacing:.02em}
+.brand-txt em{font-style:normal;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3);margin-top:2px}
+.icon-btn{
+  width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+  color:var(--fg2);display:grid;place-items:center;cursor:pointer;transition:.18s;
+}
+.icon-btn:hover{color:var(--fg);border-color:var(--line-strong)}
+.icon-btn:active{transform:scale(.94)}
+
+/* ---------------- app body ---------------- */
+#app{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+.screen{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  padding:2px 16px 26px;display:none;scrollbar-width:none;
+}
+.screen::-webkit-scrollbar{display:none}
+.screen.active{display:block}
+
+/* ---------------- generic ---------------- */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow-card);
+  padding:16px;
+  margin-bottom:12px;
+  animation:rise .42s cubic-bezier(.2,.75,.25,1) both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card h3{margin:0;font-size:14px;font-weight:650;letter-spacing:.01em}
+.muted{color:var(--fg2);font-size:12.5px;line-height:1.65;margin:8px 0 0}
+.tiny{font-size:11px;color:var(--fg3)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;background:var(--card2);padding:1px 5px;border-radius:5px;border:1px solid var(--line)}
+pre{
+  margin:10px 0 0;padding:12px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);
+  overflow-x:auto;font-size:11px;line-height:1.6;
+}
+pre code{background:none;border:none;padding:0;font-size:11px;color:var(--fg2);white-space:pre}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;
+  padding:3px 7px;border-radius:8px;letter-spacing:.01em;white-space:nowrap;
+}
+.badge.demo{background:var(--amber-soft);color:var(--amber);border:1px solid rgba(255,184,107,.25)}
+.badge.imported{background:rgba(90,169,255,.13);color:var(--blue);border:1px solid rgba(90,169,255,.25)}
+.badge.api{background:var(--mint-soft);color:var(--mint);border:1px solid rgba(67,224,176,.25)}
+[data-theme="light"] .badge.demo{border-color:rgba(178,107,0,.2)}
+[data-theme="light"] .badge.imported{border-color:rgba(43,127,224,.2)}
+[data-theme="light"] .badge.api{border-color:rgba(14,158,119,.2)}
+
+button{font-family:inherit}
+.primary{
+  border:none;border-radius:14px;padding:12px 16px;font-size:13.5px;font-weight:650;color:#04120d;
+  background:linear-gradient(135deg,#57eec2,#2ad3a6);
+  box-shadow:0 8px 22px rgba(43,212,166,.26), inset 0 1px 0 rgba(255,255,255,.4);
+  cursor:pointer;transition:.16s;white-space:nowrap;
+}
+[data-theme="light"] .primary{color:#fff;background:linear-gradient(135deg,#12b98e,#0a9a79);box-shadow:0 8px 20px rgba(14,158,119,.25), inset 0 1px 0 rgba(255,255,255,.25)}
+.primary:active{transform:translateY(1px) scale(.995)}
+.primary:disabled{opacity:.55}
+.primary.danger-solid{
+  color:#2a0707;background:linear-gradient(135deg,#ff9b9b,#f46060);
+  box-shadow:0 8px 22px rgba(244,96,96,.24), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.ghost-btn{
+  border:1px solid var(--line-strong);background:transparent;color:var(--fg2);
+  border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.16s;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+}
+.ghost-btn:hover{color:var(--fg);border-color:var(--fg3)}
+.ghost-btn:active{transform:scale(.97)}
+.danger-btn{
+  width:100%;margin-top:12px;border:1px solid rgba(255,111,111,.3);background:var(--red-soft);color:var(--red);
+  border-radius:13px;padding:11px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.16s;
+}
+.danger-btn:active{transform:scale(.99)}
+.btn-row{display:flex;gap:8px;margin-top:12px}
+.btn-row>*{flex:1}
+
+/* ---------------- search ---------------- */
+.search{padding:14px}
+.searchbar{
+  display:flex;align-items:center;gap:8px;background:var(--card2);
+  border:1px solid var(--line);border-radius:15px;padding:5px 5px 5px 12px;
+  transition:border-color .18s, box-shadow .18s;
+}
+.searchbar:focus-within{border-color:rgba(67,224,176,.45);box-shadow:0 0 0 3px rgba(67,224,176,.09)}
+.searchbar svg{flex:0 0 auto;color:var(--fg3)}
+#urlInput{
+  flex:1 1 auto;min-width:0;background:none;border:none;outline:none;color:var(--fg);
+  font-size:12.5px;padding:9px 0;font-family:inherit;
+}
+#urlInput::placeholder{color:var(--fg3)}
+.paste-btn{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--fg2);
+  border-radius:10px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;transition:.16s;
+}
+.paste-btn:hover{color:var(--mint);border-color:rgba(67,224,176,.4)}
+.searchbar .primary{padding:10px 14px;border-radius:11px;font-size:12.5px}
+.hint{margin:10px 2px 0;font-size:10.5px;color:var(--fg3);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hint .sep{opacity:.4}
+
+/* ---------------- empty ---------------- */
+.empty{padding:26px 18px 22px;text-align:center}
+.empty .art{width:132px;height:82px;margin:0 auto 16px;opacity:.95}
+.empty h3{margin:0;font-size:16px;font-weight:650;letter-spacing:.01em}
+.empty p{margin:8px auto 0;max-width:270px;font-size:12.5px;line-height:1.7;color:var(--fg2)}
+.empty .primary{width:100%;margin-top:18px}
+
+/* ---------------- product ---------------- */
+.prod{padding:15px 16px 16px}
+.prod-head{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.plat{font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:7px;letter-spacing:.02em}
+.prod-id{margin-left:auto;font-size:10px;color:var(--fg3);font-variant-numeric:tabular-nums}
+.mini-btn{
+  border:none;background:var(--card2);color:var(--fg3);width:24px;height:24px;border-radius:8px;
+  cursor:pointer;font-size:12px;display:grid;place-items:center;transition:.16s;
+}
+.mini-btn:hover{color:var(--mint)}
+.prod-title{
+  margin:0;font-size:14.5px;font-weight:600;line-height:1.45;letter-spacing:.005em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.prod-price{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:12px}
+.now{font-size:40px;font-weight:700;letter-spacing:-.035em;line-height:.95;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:2px}
+.now .cur{font-size:19px;font-weight:600;letter-spacing:0;color:var(--fg2);transform:translateY(-3px)}
+.vs{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:2px}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.down{color:var(--mint);background:var(--mint-soft)}
+.chip.up{color:var(--amber);background:var(--amber-soft)}
+.chip.flat{color:var(--fg2);background:var(--card2)}
+
+/* ---------------- verdict ---------------- */
+.verdict{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;border-radius:18px;border:1px solid var(--line);margin-bottom:12px;animation:rise .42s .04s cubic-bezier(.2,.75,.25,1) both}
+.verdict .vic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+.verdict .vtitle{font-size:13.5px;font-weight:650;letter-spacing:.01em}
+.verdict .vsub{font-size:11.5px;color:var(--fg2);margin-top:3px;line-height:1.5;font-variant-numeric:tabular-nums}
+.verdict.best{background:linear-gradient(135deg,var(--mint-soft),transparent 85%);border-color:rgba(67,224,176,.26)}
+.verdict.best .vic{background:rgba(67,224,176,.16);color:var(--mint)}
+.verdict.good{background:linear-gradient(135deg,rgba(90,169,255,.11),transparent 85%);border-color:rgba(90,169,255,.22)}
+.verdict.good .vic{background:rgba(90,169,255,.14);color:var(--blue)}
+.verdict.mid{background:var(--card2);border-color:var(--line)}
+.verdict.mid .vic{background:rgba(255,255,255,.05);color:var(--fg2)}
+[data-theme="light"] .verdict.mid .vic{background:rgba(15,23,42,.05)}
+.verdict.high{background:linear-gradient(135deg,var(--amber-soft),transparent 85%);border-color:rgba(255,184,107,.24)}
+.verdict.high .vic{background:rgba(255,184,107,.16);color:var(--amber)}
+.verdict.bad{background:linear-gradient(135deg,var(--red-soft),transparent 85%);border-color:rgba(255,111,111,.24)}
+.verdict.bad .vic{background:rgba(255,111,111,.16);color:var(--red)}
+
+/* ---------------- chart ---------------- */
+.chart-card{padding:15px 12px 10px}
+.chart-card .card-head{padding:0 4px}
+.seg{display:flex;gap:2px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:8px}
+.seg button{
+  flex:1;border:none;background:none;color:var(--fg3);font-size:11.5px;font-weight:600;
+  padding:7px 0;border-radius:9px;cursor:pointer;transition:.16s;letter-spacing:.01em;
+}
+.seg button:hover{color:var(--fg2)}
+.seg button.on{background:var(--card);color:var(--mint);box-shadow:0 2px 8px rgba(0,0,0,.22)}
+[data-theme="light"] .seg button.on{background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.10)}
+.chart-wrap{position:relative;margin-top:2px}
+.chart-wrap svg{display:block;width:100%;height:auto;overflow:visible}
+.gline{stroke:var(--line);stroke-width:1;stroke-dasharray:2 4}
+.glabel{fill:var(--fg3);font-size:9px;font-variant-numeric:tabular-nums}
+.xlabel{fill:var(--fg3);font-size:9px;font-variant-numeric:tabular-nums}
+.band{fill:var(--mint);opacity:.055}
+.area{fill:url(#areaGrad)}
+.line{fill:none;stroke:var(--mint);stroke-width:1.9;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 5px 9px rgba(67,224,176,.22))}
+.dot-min{fill:var(--mint);stroke:var(--card);stroke-width:1.6}
+.dot-max{fill:var(--amber);stroke:var(--card);stroke-width:1.6}
+.dot-now{fill:var(--fg);stroke:var(--card);stroke-width:1.8}
+.pulse{fill:none;stroke:var(--fg);stroke-width:1;opacity:.35}
+.plabel{font-size:9px;font-weight:650;font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--card);stroke-width:2.4px;stroke-linejoin:round}
+.plabel.min{fill:var(--mint)}
+.plabel.max{fill:var(--amber)}
+.cross line{stroke:var(--fg3);stroke-width:1;stroke-dasharray:3 3}
+.cross circle{fill:var(--fg);stroke:var(--bg);stroke-width:1.6}
+.tip{
+  position:absolute;top:6px;left:0;z-index:6;pointer-events:none;
+  background:var(--card);border:1px solid var(--line-strong);border-radius:12px;
+  padding:7px 10px;box-shadow:0 14px 34px rgba(0,0,0,.42);
+  opacity:0;transition:opacity .12s;white-space:nowrap;
+}
+.tip.show{opacity:1}
+.tip-d{font-size:9.5px;color:var(--fg3);letter-spacing:.02em}
+.tip-p{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:1px}
+.tip-s{font-size:9.5px;color:var(--fg2);margin-top:1px}
+.chart-foot{display:flex;justify-content:space-between;gap:8px;padding:6px 4px 2px;font-size:10px;color:var(--fg3)}
+.legend{display:flex;align-items:center;gap:10px}
+.legend i{width:6px;height:6px;border-radius:2px;display:inline-block;margin-right:4px;transform:translateY(-1px)}
+.legend .m{background:var(--mint)}
+.legend .a{background:var(--amber)}
+.legend .b{background:var(--mint);opacity:.35}
+
+/* ---------------- stats ---------------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.stat{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;padding:11px 13px;
+  animation:rise .42s cubic-bezier(.2,.75,.25,1) both;
+}
+.stat .k{font-size:10.5px;color:var(--fg3);letter-spacing:.02em}
+.stat .v{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:11px;font-weight:600;letter-spacing:0;color:var(--fg2);margin-left:1px}
+.stat .s{font-size:10px;color:var(--fg3);margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* ---------------- distribution ---------------- */
+.hist-wrap{position:relative;margin-top:14px}
+.hist{position:relative;display:flex;align-items:flex-end;gap:3px;height:76px;padding-top:8px}
+.hbar{
+  flex:1;min-height:3px;border-radius:3px 3px 1px 1px;
+  background:linear-gradient(180deg,rgba(67,224,176,.85),rgba(67,224,176,.22));
+  transition:height .5s cubic-bezier(.2,.8,.3,1);
+}
+[data-theme="light"] .hbar{background:linear-gradient(180deg,rgba(14,158,119,.75),rgba(14,158,119,.18))}
+.hbar.hot{background:linear-gradient(180deg,var(--amber),rgba(255,184,107,.3))}
+[data-theme="light"] .hbar.hot{background:linear-gradient(180deg,#e08a2a,rgba(224,138,42,.3))}
+.hist-cur{position:absolute;top:0;bottom:-2px;width:0;border-left:1px dashed var(--amber);opacity:.85}
+.hist-cur b{
+  position:absolute;top:-4px;left:0;transform:translateX(-50%);
+  font-size:9px;font-weight:700;color:var(--amber);background:var(--card);
+  padding:0 4px;border-radius:4px;white-space:nowrap;
+}
+.hist-cur.at-start b{transform:none;left:0}
+.hist-cur.at-end b{transform:translateX(-100%)}
+.hist-axis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--fg3);margin-top:6px;font-variant-numeric:tabular-nums}
+.range-note{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--fg2);margin-top:2px}
+.range-note b{color:var(--fg);font-weight:650;font-variant-numeric:tabular-nums}
+
+/* ---------------- target ---------------- */
+.target-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.target-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.target-st{font-size:11.5px;color:var(--fg2);margin-top:2px}
+.target-st.ok{color:var(--mint);font-weight:600}
+
+/* ---------------- records ---------------- */
+.rec{
+  display:flex;align-items:center;gap:11px;padding:13px 14px;background:var(--card);
+  border:1px solid var(--line);border-radius:17px;margin-bottom:9px;cursor:pointer;
+  transition:.16s;animation:rise .4s cubic-bezier(.2,.75,.25,1) both;
+}
+.rec:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+.rec:active{transform:scale(.995)}
+.rec-main{flex:1 1 auto;min-width:0}
+.rec-top{display:flex;align-items:center;gap:6px}
+.rec-title{
+  font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.rec-meta{font-size:10px;color:var(--fg3);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-side{flex:0 0 auto;text-align:right}
+.rec-price{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.rec-delta{font-size:10px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.rec-delta.down{color:var(--mint)}
+.rec-delta.up{color:var(--amber)}
+.rec-delta.flat{color:var(--fg3)}
+.rec-del{
+  flex:0 0 auto;width:22px;height:22px;border-radius:7px;border:none;background:transparent;
+  color:var(--fg3);cursor:pointer;font-size:14px;line-height:1;display:grid;place-items:center;
+}
+.rec-del:hover{color:var(--red);background:var(--red-soft)}
+.spark{flex:0 0 auto;opacity:.9}
+
+/* ---------------- data screen ---------------- */
+.ticks{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.ticks li{position:relative;padding-left:18px;font-size:12px;color:var(--fg2);line-height:1.55}
+.ticks li::before{
+  content:"";position:absolute;left:2px;top:6px;width:8px;height:8px;border-radius:3px;
+  background:var(--mint-soft);border:1px solid rgba(67,224,176,.45);
+}
+textarea{
+  width:100%;margin-top:10px;min-height:96px;resize:vertical;padding:11px 12px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:13px;color:var(--fg);
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;line-height:1.6;outline:none;
+}
+textarea:focus{border-color:rgba(67,224,176,.4)}
+textarea::placeholder{color:var(--fg3)}
+
+/* ---------------- tabbar ---------------- */
+.tabbar{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:space-around;
+  padding:7px 12px calc(7px + var(--safe-b));
+  border-top:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(10,12,17,0),rgba(10,12,17,.86));
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+}
+[data-theme="light"] .tabbar{background:linear-gradient(180deg,rgba(238,241,247,0),rgba(238,241,247,.9))}
+.tab{
+  flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:5px 0;color:var(--fg3);cursor:pointer;font-size:9.5px;font-weight:600;letter-spacing:.02em;
+  transition:color .18s;position:relative;
+}
+.tab svg{display:block;transition:transform .2s}
+.tab.on{color:var(--mint)}
+.tab.on svg{transform:translateY(-1px)}
+.tab.on::after{
+  content:"";position:absolute;top:0;width:14px;height:2.5px;border-radius:2px;background:var(--mint);
+  box-shadow:0 0 8px rgba(67,224,176,.6);
+}
+
+/* ---------------- sheet ---------------- */
+.sheet-bk{
+  position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:opacity .25s;z-index:20;
+}
+[data-theme="light"] .sheet-bk{background:rgba(15,23,42,.35)}
+.sheet-bk.open{opacity:1;pointer-events:auto}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:21;
+  background:var(--card);border-radius:26px 26px 0 0;
+  border-top:1px solid var(--line-strong);
+  padding:8px 18px calc(20px + var(--safe-b));
+  transform:translateY(102%);transition:transform .32s cubic-bezier(.2,.9,.25,1);
+  box-shadow:0 -20px 50px rgba(0,0,0,.4);
+}
+.sheet.open{transform:translateY(0)}
+.grab{width:38px;height:4px;border-radius:3px;background:var(--line-strong);margin:2px auto 14px}
+.sheet h3{margin:0 0 4px;font-size:15px}
+.field{display:block;margin-top:12px}
+.field span{display:block;font-size:10.5px;color:var(--fg3);margin-bottom:5px;letter-spacing:.02em}
+.field input{
+  width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--bg2);color:var(--fg);font-size:13.5px;outline:none;font-family:inherit;
+  font-variant-numeric:tabular-nums;
+}
+.field input:focus{border-color:rgba(67,224,176,.45);box-shadow:0 0 0 3px rgba(67,224,176,.08)}
+.sheet .btn-row{margin-top:18px}
+
+/* ---------------- toast ---------------- */
+.toast{
+  position:absolute;left:50%;bottom:96px;transform:translate(-50%,14px);
+  background:rgba(28,33,44,.96);color:#fff;font-size:12px;font-weight:500;
+  padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 14px 34px rgba(0,0,0,.45);opacity:0;pointer-events:none;z-index:30;
+  transition:.25s;max-width:82%;text-align:center;line-height:1.5;
+}
+[data-theme="light"] .toast{background:rgba(15,23,42,.94)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------------- iOS / 手机适配 ---------------- */
+.screen{overscroll-behavior:contain}
+@media (max-width:599px){
+  /* iOS Safari 在 <16px 的输入框获得焦点时会自动放大页面 */
+  #urlInput,.field input,textarea{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+
+    <div class="statusbar">
+      <span id="clock">10:32</span>
+      <span class="sb-right">
+        <svg width="17" height="11" viewBox="0 0 17 11" aria-hidden="true"><rect x="0" y="7.5" width="3" height="3.5" rx="1"/><rect x="4.7" y="5.2" width="3" height="5.8" rx="1"/><rect x="9.4" y="2.8" width="3" height="8.2" rx="1"/><rect x="14.1" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="16" height="11" viewBox="0 0 16 11" aria-hidden="true"><path d="M8 2.1c2.2 0 4.2.85 5.7 2.25l1.1-1.15A9.7 9.7 0 0 0 8 .5 9.7 9.7 0 0 0 1.2 3.2l1.1 1.15A8.1 8.1 0 0 1 8 2.1Zm0 3.2c1.35 0 2.58.52 3.5 1.37l1.1-1.15A6.7 6.7 0 0 0 8 3.7a6.7 6.7 0 0 0-4.6 1.82l1.1 1.15A5.1 5.1 0 0 1 8 5.3Zm0 3.2c.62 0 1.18.25 1.6.65L8 10.9 6.4 9.15c.42-.4.98-.65 1.6-.65Z"/></svg>
+        <svg width="23" height="11" viewBox="0 0 23 11" aria-hidden="true"><rect x="0.5" y="0.5" width="19" height="10" rx="3" fill="none" stroke="currentColor" stroke-opacity=".45"/><rect x="2" y="2" width="15" height="7" rx="1.8"/><path d="M21 3.6v3.8c1.1-.35 1.1-3.45 0-3.8Z" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 17.4l4.6-5.2 3.1 2.3 4.3-6.1 3 2.8L21 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="21" cy="6" r="1.9" fill="currentColor"/>
+          </svg>
+        </span>
+        <div class="brand-txt"><strong>价尺</strong><em>Price Lens</em></div>
+      </div>
+      <button class="icon-btn" id="themeBtn" title="切换深浅色" aria-label="切换深浅色">
+        <svg id="icoSun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>
+        </svg>
+        <svg id="icoMoon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <path d="M20.5 14.4A8.6 8.6 0 1 1 9.6 3.5a6.9 6.9 0 0 0 10.9 10.9Z"/>
+        </svg>
+      </button>
+    </header>
+
+    <main id="app">
+      <!-- ============ 查询 ============ -->
+      <section class="screen active" id="scr-home">
+        <div class="card search">
+          <div class="searchbar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13.5a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 1 0-6-6L11.6 6"/><path d="M14 10.5a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 1 0 6 6L12.4 18"/></svg>
+            <input id="urlInput" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                   placeholder="粘贴淘宝 / 天猫 / 京东 商品链接" />
+            <button class="paste-btn" id="pasteBtn" title="从剪贴板粘贴" aria-label="从剪贴板粘贴">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3.2" width="8" height="3.4" rx="1.2"/><path d="M8.4 5H6.6A1.6 1.6 0 0 0 5 6.6v13.2A1.6 1.6 0 0 0 6.6 21.4h10.8a1.6 1.6 0 0 0 1.6-1.6V6.6A1.6 1.6 0 0 0 17.4 5h-1.8"/></svg>
+            </button>
+            <button class="primary" id="goBtn">查询</button>
+          </div>
+          <div class="hint">
+            <span>支持 淘宝</span><span class="sep">·</span><span>天猫</span><span class="sep">·</span><span>京东</span><span class="sep">·</span><span>拼多多</span>
+            <span class="sep">·</span><span>短链接</span>
+          </div>
+        </div>
+        <div id="result"></div>
+      </section>
+
+      <!-- ============ 记录 ============ -->
+      <section class="screen" id="scr-records">
+        <div id="recordsList"></div>
+      </section>
+
+      <!-- ============ 数据 ============ -->
+      <section class="screen" id="scr-data">
+        <div class="card">
+          <div class="card-head">
+            <h3>当前数据源</h3>
+            <span class="badge demo" id="srcBadge">演示引擎</span>
+          </div>
+          <p class="muted">
+            淘宝与京东都没有公开的历史价格接口。本应用内置一个<strong>可复现的行情模拟器</strong>：
+            同一个链接每次生成的曲线完全一致，用来演示界面、统计口径与判断逻辑。
+          </p>
+          <ul class="ticks">
+            <li>当前价、历史最低、波动幅度都是模拟值，不是真实行情</li>
+            <li>导入真实数据或接入接口后，结论才有参考价值</li>
+            <li>模拟曲线包含 618 / 双11 / 年货节等大促区间</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>导入真实数据</h3>
+          <p class="muted">支持 CSV（<code>日期,价格</code>，一行一条）或 JSON。导入后会替换当前商品的曲线。</p>
+          <textarea id="importText" spellcheck="false" placeholder="2026-05-01,1299&#10;2026-05-02,1299&#10;2026-05-03,1159&#10;2026-05-04,1159&#10;2026-05-05,1099"></textarea>
+          <div class="btn-row">
+            <label class="ghost-btn" for="importFile">选择文件</label>
+            <input type="file" id="importFile" accept=".csv,.txt,.json" hidden />
+            <button class="primary" id="importBtn">导入到当前商品</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>接入真实接口</h3>
+          <p class="muted">在页面里定义 <code>window.PRICE_LENS_FETCH</code>，之后每次查询会优先调用它；失败则回退到演示数据。</p>
+          <pre><code>window.PRICE_LENS_FETCH = async (info) =&gt; {
+  // info = { platform, id, url }
+  const r = await fetch(
+    'http://127.0.0.1:8787/api/history?url=' +
+    encodeURIComponent(info.url));
+  const j = await r.json();
+  return j.series;
+  // [{ date: '2026-05-01', price: 1299 }, ...]
+};</code></pre>
+        </div>
+
+        <div class="card">
+          <h3>本地数据</h3>
+          <p class="muted">查询记录、目标价与导入的曲线只保存在这台设备的浏览器里，不会上传。</p>
+          <button class="danger-btn" id="clearBtn">清除全部本地数据</button>
+        </div>
+
+        <p class="tiny" style="text-align:center;line-height:1.7;padding:6px 12px 0">
+          价尺 PriceLens · 本地单文件应用<br/>历史价格仅供个人决策参考，不构成购买建议
+        </p>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab on" data-tab="home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.6"/><path d="M20.5 20.5l-4.4-4.4"/></svg>
+        <span>查询</span>
+      </button>
+      <button class="tab" data-tab="records">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.2 4.2v4.4h4.4"/><path d="M12 8v4.4l3 1.8"/></svg>
+        <span>记录</span>
+      </button>
+      <button class="tab" data-tab="data">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7.4" ry="3.1"/><path d="M4.6 6v6c0 1.7 3.3 3.1 7.4 3.1s7.4-1.4 7.4-3.1V6"/><path d="M4.6 12v6c0 1.7 3.3 3.1 7.4 3.1s7.4-1.4 7.4-3.1v-6"/></svg>
+        <span>数据</span>
+      </button>
+    </nav>
+
+    <div class="sheet-bk" id="sheetBk"></div>
+    <div class="sheet" id="sheet">
+      <div class="grab"></div>
+      <div id="sheetBody"></div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== 基础工具 ==================== */
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var DAY = 86400000;
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+  }
+  function hexA(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function money(v) {
+    var n = Math.round(Number(v) * 100) / 100;
+    return n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+  }
+  function axisMoney(v) {
+    if (v >= 10000) return (v / 10000).toFixed(v >= 100000 ? 0 : 1).replace(/\.0$/, '') + '万';
+    if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return String(Math.round(v));
+  }
+  function startOfDay(t) { var d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function md(ts) { var d = new Date(ts); return (d.getMonth() + 1) + '/' + d.getDate(); }
+  function cnDate(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function monthDay(ts) { var d = new Date(ts); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+  function relTime(ts) {
+    var d = Date.now() - ts;
+    if (d < 60000) return '刚刚';
+    if (d < 3600000) return Math.floor(d / 60000) + ' 分钟前';
+    if (d < 86400000) return Math.floor(d / 3600000) + ' 小时前';
+    if (d < 7 * 86400000) return Math.floor(d / 86400000) + ' 天前';
+    var t = new Date(ts);
+    return (t.getMonth() + 1) + '月' + t.getDate() + '日';
+  }
+  function hash32(str) {
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function nicePrice(v, r) {
+    if (v < 20) return Math.max(1, Math.round(v));
+    var base = Math.round(v / 10) * 10;
+    return r() < 0.18 ? base : base - 1;
+  }
+
+  /* ==================== 本地存储 ==================== */
+  var LSKEY = 'pricelens.v2';
+  var DEFAULTS = { records: [], imported: {}, settings: { theme: 'auto', range: 180 } };
+  var db = loadDB();
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function loadDB() {
+    try {
+      var raw = localStorage.getItem(LSKEY);
+      if (!raw) return clone(DEFAULTS);
+      var p = JSON.parse(raw);
+      var out = clone(DEFAULTS);
+      if (Array.isArray(p.records)) out.records = p.records;
+      if (p.imported && typeof p.imported === 'object') out.imported = p.imported;
+      if (p.settings) out.settings = Object.assign(out.settings, p.settings);
+      return out;
+    } catch (e) { return clone(DEFAULTS); }
+  }
+  function saveDB() {
+    try { localStorage.setItem(LSKEY, JSON.stringify(db)); }
+    catch (e) { toast('本地存储空间不足，数据可能没有保存'); }
+  }
+
+  /* ==================== 链接解析 ==================== */
+  var PLAT = {
+    taobao: { name: '淘宝', color: '#ff6a00' },
+    tmall: { name: '天猫', color: '#ff2d55' },
+    jd: { name: '京东', color: '#e1251b' },
+    pdd: { name: '拼多多', color: '#e02e24' }
+  };
+  var SHORT_HOSTS = ['m.tb.cn', 'tb.cn', 'e.tb.cn', 'u.jd.com', '3.cn', 's.click.taobao.com', 'mjd.im'];
+
+  function hostIs(host, list) {
+    return list.some(function (h) { return host === h || host.slice(-(h.length + 1)) === '.' + h; });
+  }
+
+  function parseLink(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return null;
+    s = s.replace(/[，。、\s]+$/, '');
+    if (!/^https?:\/\//i.test(s)) {
+      if (/^[\w-]+(\.[\w-]+)+\//.test(s)) s = 'https://' + s;
+      else return null;
+    }
+    var u;
+    try { u = new URL(s); } catch (e) { return null; }
+    var host = u.hostname.toLowerCase().replace(/^www\./, '');
+    var q = u.searchParams;
+    var short = hostIs(host, SHORT_HOSTS);
+    var platform = null;
+
+    if (hostIs(host, ['tmall.com', 'tmall.hk', 'detail.tmall.com'])) platform = 'tmall';
+    else if (hostIs(host, ['taobao.com', 'tb.cn'])) platform = 'taobao';
+    else if (hostIs(host, ['jd.com', 'jd.hk', '3.cn', 'mjd.im'])) platform = 'jd';
+    else if (hostIs(host, ['yangkeduo.com', 'pinduoduo.com', 'pdd.com'])) platform = 'pdd';
+    if (!platform) return null;
+
+    var id = null;
+    var path = u.pathname || '';
+
+    if (platform === 'jd') {
+      id = q.get('sku') || q.get('skuId') || q.get('wareId');
+      if (!id) { var m = path.match(/\/(\d{5,})\.html/); if (m) id = m[1]; }
+      if (!id) { var m2 = path.match(/\/product\/(\d{5,})/); if (m2) id = m2[1]; }
+    } else if (platform === 'pdd') {
+      id = q.get('goods_id') || q.get('goodsId');
+      if (!id) { var m3 = path.match(/\/(\d{6,})/); if (m3) id = m3[1]; }
+    } else {
+      id = q.get('id') || q.get('itemId') || q.get('item_id');
+      if (!id) { var m4 = path.match(/\/(\d{6,})\.html?/); if (m4) id = m4[1]; }
+      if (!id) { var m5 = path.match(/\/(\d{6,})/); if (m5) id = m5[1]; }
+    }
+
+    if (!id && short) {
+      var seg = path.split('/').filter(Boolean);
+      id = seg.length ? seg[seg.length - 1] : host;
+    }
+    if (!id) return null;
+    id = String(id).replace(/[^\w-]/g, '').slice(0, 32);
+    if (!id) return null;
+
+    var key = (short ? 'short:' : '') + platform + ':' + id;
+    return {
+      key: key,
+      platform: platform,
+      platformName: PLAT[platform].name,
+      id: id,
+      short: short,
+      url: u.href,
+      title: q.get('title') || q.get('name') || ''
+    };
+  }
+
+  function shortId(id) { return id.length > 8 ? id.slice(-6) : id; }
+  function defaultTitle(info) {
+    return info.platformName + '商品 · ' + shortId(info.id);
+  }
+
+  /* ==================== 数据规范化 / 导入 ==================== */
+  function parseDateStr(s) {
+    s = String(s).trim();
+    var m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]).getTime();
+    var m2 = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (m2) return new Date(+m2[1], +m2[2] - 1, +m2[3]).getTime();
+    var d = new Date(s);
+    return isFinite(d.getTime()) ? startOfDay(d.getTime()) : NaN;
+  }
+
+  function normalizeSeries(arr) {
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var it = arr[i], t = null, p = NaN;
+      if (Array.isArray(it)) { t = it[0]; p = Number(it[1]); }
+      else if (it && typeof it === 'object') {
+        t = it.date || it.d || it.t || it.time || it.day;
+        p = Number(it.price != null ? it.price : (it.p != null ? it.p : it.value));
+      }
+      var ts;
+      if (typeof t === 'number') ts = t > 1e12 ? t : t * 1000;
+      else ts = parseDateStr(t);
+      if (!isFinite(ts) || !isFinite(p) || p <= 0) continue;
+      out.push({ t: startOfDay(ts), p: p });
+    }
+    out.sort(function (a, b) { return a.t - b.t; });
+    var map = new Map();
+    out.forEach(function (o) { map.set(o.t, o); });
+    var list = Array.from(map.values()).sort(function (a, b) { return a.t - b.t; });
+    return list;
+  }
+
+  function parseImportText(txt) {
+    var s = String(txt || '').trim();
+    if (!s) throw new Error('内容为空');
+    if (s[0] === '[' || s[0] === '{') {
+      var j = JSON.parse(s);
+      var arr = Array.isArray(j) ? j : (j.series || j.data || j.prices || j.history || null);
+      if (!Array.isArray(arr)) throw new Error('JSON 里没有找到 series 数组');
+      var list = normalizeSeries(arr);
+      if (list.length < 2) throw new Error('有效数据点少于 2 个');
+      return list;
+    }
+    var rows = s.split(/\r?\n/);
+    var out = [];
+    rows.forEach(function (line) {
+      line = line.trim();
+      if (!line || /^(date|日期)/i.test(line)) return;
+      var parts = line.split(/[,\t;|]+|\s{2,}/).map(function (x) { return x.trim(); }).filter(Boolean);
+      if (parts.length < 2) {
+        var sp = line.split(/\s+/);
+        if (sp.length >= 2) parts = sp;
+      }
+      if (parts.length < 2) return;
+      var a = parts[0], b = parts[1];
+      var ts = parseDateStr(a), p = Number(b.replace(/[¥￥,\s]/g, ''));
+      if (!isFinite(ts) || !isFinite(p) || p <= 0) {
+        var ts2 = parseDateStr(b), p2 = Number(a.replace(/[¥￥,\s]/g, ''));
+        if (isFinite(ts2) && isFinite(p2) && p2 > 0) { ts = ts2; p = p2; } else return;
+      }
+      out.push({ t: startOfDay(ts), p: p });
+    });
+    var list2 = normalizeSeries(out);
+    if (list2.length < 2) throw new Error('没有解析出有效数据，请检查格式：日期,价格');
+    return list2;
+  }
+
+  /* ==================== 模拟行情引擎 ==================== */
+  var PROMOS = [
+    { m: 6, d: 1, len: 18, n: '618' },
+    { m: 11, d: 1, len: 11, n: '双11' },
+    { m: 12, d: 10, len: 3, n: '双12' },
+    { m: 1, d: 10, len: 11, n: '年货节' },
+    { m: 3, d: 4, len: 5, n: '38节' },
+    { m: 9, d: 9, len: 2, n: '99节' },
+    { m: 5, d: 1, len: 3, n: '五一' },
+    { m: 8, d: 18, len: 2, n: '818' }
+  ];
+
+  function simulate(key) {
+    var r = rng(hash32(key));
+    var today = startOfDay(Date.now());
+    var N = 400;
+    var start = today - (N - 1) * DAY;
+
+    var tiers = [[59, 159], [99, 259], [169, 499], [299, 899], [599, 1699], [1299, 3999], [2599, 8999]];
+    var ti = Math.min(tiers.length - 1, Math.floor(Math.pow(r(), 1.2) * tiers.length));
+    var tier = tiers[ti];
+    var base = nicePrice(tier[0] + r() * (tier[1] - tier[0]), r);
+    var listPrice = nicePrice(base * (1.16 + r() * 0.34), r);
+
+    var wins = [];
+    var y0 = new Date(start).getFullYear();
+    var y1 = new Date(today).getFullYear();
+    for (var y = y0; y <= y1; y++) {
+      for (var k = 0; k < PROMOS.length; k++) {
+        var w = PROMOS[k];
+        var from = new Date(y, w.m - 1, w.d).getTime();
+        var to = from + (w.len - 1) * DAY;
+        if (to < start || from > today) continue;
+        wins.push({ from: from, to: to, name: w.n });
+      }
+    }
+    wins.sort(function (a, b) { return a.from - b.from; });
+
+    // 基础价格阶梯：日常价长期不变，隔几十天才调一次，形成平台段
+    var steps = [];
+    var price = listPrice;
+    var t0 = start;
+    while (t0 <= today && steps.length < 14) {
+      steps.push({ t: t0, p: nicePrice(price * (0.985 + r() * 0.02), r) });
+      t0 += (42 + Math.floor(r() * 78)) * DAY;
+      price *= (1 - (0.022 + r() * 0.05));
+      if (r() < 0.16) price *= 1.05;
+    }
+    function basePrice(ts) {
+      var p = steps[0].p;
+      for (var i = 0; i < steps.length; i++) if (ts >= steps[i].t) p = steps[i].p;
+      return p;
+    }
+
+    // 平台券 / 秒杀：1-3 天的小幅下探
+    var coupons = {};
+    var dd = 8 + Math.floor(r() * 16);
+    while (dd < N) {
+      var len = 1 + Math.floor(r() * 2);
+      var depth = 0.925 + r() * 0.045;
+      for (var q = 0; q < len; q++) coupons[dd + q] = depth;
+      dd += 19 + Math.floor(r() * 22);
+    }
+    var flash = {};
+    var flashes = 2 + Math.floor(r() * 3);
+    for (var f = 0; f < flashes; f++) flash[Math.floor(r() * N)] = 0.84 + r() * 0.05;
+
+    // 最近一段时间调价回弹，让“当前价”落在区间中部，更像真实商品
+    if (steps.length > 2 && r() < 0.6) {
+      var sortedP = steps.map(function (s) { return s.p; }).sort(function (x, y2) { return x - y2; });
+      var midP = sortedP[Math.floor(sortedP.length / 2)];
+      var lastStep = steps[steps.length - 1];
+      steps[steps.length - 1] = { t: lastStep.t, p: nicePrice(midP * (0.96 + r() * 0.12), r) };
+    }
+
+    // 今天不是促销日，避免演示曲线末端正好落在最低点
+    delete coupons[N - 1];
+    delete flash[N - 1];
+
+    var series = [];
+    for (var i = 0; i < N; i++) {
+      var t = start + i * DAY;
+      var rr = rng(hash32(key + '|' + i));
+      var bp = basePrice(t);
+      var factor = 1;
+
+      var win = null;
+      for (var j = 0; j < wins.length; j++) {
+        if (t >= wins[j].from && t <= wins[j].to) { win = wins[j]; break; }
+      }
+      if (win) {
+        var prog = (t - win.from) / ((win.to - win.from) || 1);
+        var wf = 1 - (0.035 + 0.065 * Math.pow(prog, 1.2));
+        if (t === win.to) wf *= 0.955;
+        factor = Math.min(factor, wf);
+      }
+      if (coupons[i]) factor = Math.min(factor, coupons[i]);
+      if (flash[i]) factor = Math.min(factor, flash[i]);
+
+      var p = clamp(bp * factor, base * 0.6, listPrice * 1.06);
+      series.push({ t: t, p: nicePrice(p, rr) });
+    }
+
+    // 波动太小则拉开差距
+    var mn = Infinity, mx = -Infinity;
+    series.forEach(function (s) { if (s.p < mn) mn = s.p; if (s.p > mx) mx = s.p; });
+    if (mx / mn < 1.12) {
+      for (var c = 0; c < series.length; c++) if (c < N * 0.6) series[c].p = nicePrice(series[c].p * 1.12, rng(hash32(key + '#x' + c)));
+    }
+
+    return { series: series, wins: wins, base: base, list: listPrice };
+  }
+
+  /* ==================== 统计与判断 ==================== */
+  function analyze(series) {
+    var n = series.length;
+    var min = Infinity, max = -Infinity, minT = series[0].t, maxT = series[0].t;
+    var sum = 0;
+    var ps = [];
+    series.forEach(function (s) {
+      ps.push(s.p);
+      sum += s.p;
+      if (s.p < min) { min = s.p; minT = s.t; }
+      if (s.p > max) { max = s.p; maxT = s.t; }
+    });
+    var avg = sum / n;
+    var sorted = ps.slice().sort(function (a, b) { return a - b; });
+    var med = n % 2 ? sorted[(n - 1) >> 1] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    var vsum = 0;
+    for (var i = 0; i < n; i++) vsum += (ps[i] - avg) * (ps[i] - avg);
+    var sd = Math.sqrt(vsum / n);
+    var cur = ps[n - 1];
+    var below = 0;
+    for (var j = 0; j < n; j++) if (ps[j] <= cur) below++;
+    var pos = max > min ? (cur - min) / (max - min) : 0.5;
+    return {
+      n: n, ps: ps, min: min, max: max, minT: minT, maxT: maxT,
+      avg: avg, med: med, sd: sd, cur: cur, below: below, pos: pos,
+      spread: max - min, spreadPct: min > 0 ? (max - min) / min * 100 : 0,
+      vol: avg > 0 ? sd / avg * 100 : 0,
+      pct: below / n * 100,
+      fromMin: min > 0 ? (cur - min) / min * 100 : 0
+    };
+  }
+
+  function activeSeries(full) {
+    var range = Number(db.settings.range) || 0;
+    return range > 0 && full.length > range ? full.slice(-range) : full;
+  }
+
+  function verdictOf(a) {
+    var p = a.pos;
+    if (p <= 0.05) return { tone: 'best', t: '历史最低价，可以直接下手', s: '当前价就是这条曲线的最低点' };
+    if (p <= 0.24) return { tone: 'best', t: '好价区间，可以入手', s: '贴近历史底部，是不错的买入点' };
+    if (p <= 0.46) return { tone: 'good', t: '价格偏低，值得考虑', s: '低于多数时间的报价' };
+    if (p <= 0.70) return { tone: 'mid', t: '价格适中，不急可以再等', s: '还有下探空间，等大促更划算' };
+    if (p <= 0.90) return { tone: 'high', t: '价格偏高，建议等大促', s: '离历史低点还有明显差距' };
+    return { tone: 'bad', t: '接近历史高点，先别买', s: '此刻入手大概率买贵' };
+  }
+
+  var VI = {
+    best: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5L9.4 17.1 4 11.7"/></svg>',
+    good: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5l5-5 4 3 7-8"/><path d="M20 5.5v4h-4"/></svg>',
+    mid: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+    high: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v9"/><circle cx="12" cy="18.6" r="1.4" fill="currentColor" stroke="none"/></svg>',
+    bad: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 15.5H3z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor" stroke="none"/></svg>'
+  };
+
+  /* ==================== 查询流程 ==================== */
+  var state = { current: null, tab: 'home' };
+  var SAMPLE = 'https://item.jd.com/100012043978.html';
+
+  function seriesFor(key) {
+    var imp = db.imported[key];
+    if (imp && imp.series && imp.series.length > 1) {
+      var list = normalizeSeries(imp.series);
+      if (list.length > 1) return { series: list, wins: [], source: 'imported', sim: null };
+    }
+    var s = simulate(key);
+    return { series: s.series, wins: s.wins, source: 'demo', sim: s };
+  }
+
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, ms); })
+    ]);
+  }
+
+  function runQuery(raw, opts) {
+    opts = opts || {};
+    var info = parseLink(raw);
+    if (!info) {
+      if (!opts.silent) toast('没认出商品链接，请粘贴淘宝 / 天猫 / 京东 / 拼多多链接');
+      return Promise.resolve(false);
+    }
+    $('#urlInput').value = raw.trim();
+    var built = seriesFor(info.key);
+    var self = Promise.resolve();
+
+    if (built.source === 'demo' && typeof window.PRICE_LENS_FETCH === 'function') {
+      self = withTimeout(window.PRICE_LENS_FETCH({ platform: info.platform, id: info.id, url: info.url }), 12000)
+        .then(function (arr) {
+          if (Array.isArray(arr)) {
+            var list = normalizeSeries(arr);
+            if (list.length > 1) built = { series: list, wins: [], source: 'api', sim: null };
+          }
+        })
+        .catch(function () { if (!opts.silent) toast('接口调用失败，已回退到演示数据'); });
+    }
+
+    return self.then(function () {
+      applyQuery(info, built);
+      return true;
+    });
+  }
+
+  function applyQuery(info, built) {
+    $('#urlInput').value = info.url;
+    var rec = db.records.filter(function (x) { return x.key === info.key; })[0];
+    var last = built.series[built.series.length - 1];
+
+    if (!rec) {
+      rec = {
+        key: info.key,
+        url: info.url,
+        platform: info.platform,
+        id: info.id,
+        title: info.title || defaultTitle(info),
+        source: built.source,
+        current: last.p,
+        target: null,
+        ts: Date.now()
+      };
+      db.records.unshift(rec);
+    } else {
+      rec.url = info.url;
+      rec.source = built.source;
+      rec.ts = Date.now();
+      if (!rec.current || !isFinite(rec.current)) rec.current = last.p;
+      db.records = [rec].concat(db.records.filter(function (x) { return x.key !== info.key; }));
+    }
+    saveDB();
+
+    var series = built.series;
+    if (rec.current && isFinite(rec.current) && Math.abs(rec.current - last.p) > 0.001) {
+      var copyLast = { t: last.t, p: rec.current };
+      series = series.slice(0, -1).concat([copyLast]);
+    }
+
+    state.current = {
+      info: info,
+      rec: rec,
+      series: series,
+      wins: built.wins,
+      source: built.source,
+      sim: built.sim
+    };
+    renderHome();
+    switchTab('home');
+    $('#scr-home').scrollTop = 0;
+  }
+
+  /* ==================== 渲染：首页 ==================== */
+  function emptyHTML() {
+    return '' +
+      '<div class="card empty">' +
+      '<svg class="art" viewBox="0 0 132 82" fill="none">' +
+      '<defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#43e0b0" stop-opacity=".35"/><stop offset="1" stop-color="#43e0b0" stop-opacity="0"/></linearGradient></defs>' +
+      '<path d="M6 70h120" stroke="currentColor" stroke-opacity=".14" stroke-width="1"/>' +
+      '<path d="M6 50h120" stroke="currentColor" stroke-opacity=".08" stroke-width="1" stroke-dasharray="2 5"/>' +
+      '<path d="M6 30h120" stroke="currentColor" stroke-opacity=".08" stroke-width="1" stroke-dasharray="2 5"/>' +
+      '<path d="M8 44L28 36L48 41L66 24L86 30L104 15L124 20" stroke="#43e0b0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M8 44L28 36L48 41L66 24L86 30L104 15L124 20L124 70L8 70Z" fill="url(#eg)"/>' +
+      '<circle cx="66" cy="24" r="3.6" fill="#43e0b0" stroke="#0a0c11" stroke-width="2"/>' +
+      '<circle cx="104" cy="15" r="3.6" fill="#ffb86b" stroke="#0a0c11" stroke-width="2"/>' +
+      '</svg>' +
+      '<h3>粘贴链接，看清一年价格</h3>' +
+      '<p>展开历史价格曲线、历史最低价与波动幅度，并判断现在是不是入手时机。</p>' +
+      '<button class="primary" data-act="demo">用示例链接体验</button>' +
+      '</div>';
+  }
+
+  function srcBadge(source) {
+    if (source === 'imported') return '<span class="badge imported">导入数据</span>';
+    if (source === 'api') return '<span class="badge api">接口数据</span>';
+    return '<span class="badge demo">演示数据</span>';
+  }
+
+  function renderHome() {
+    var box = $('#result');
+    var c = state.current;
+
+    if (!c) {
+      box.innerHTML = emptyHTML();
+      return;
+    }
+
+    var a = analyze(activeSeries(c.series));
+    var v = verdictOf(a);
+    var pc = PLAT[c.info.platform].color;
+    var rec = c.rec;
+    var diffMin = a.cur - a.min;
+    var diffCls = diffMin < -0.5 ? 'down' : diffMin > 0.5 ? 'up' : 'flat';
+
+    var html = '';
+
+    // --- 商品卡 ---
+    html +=
+      '<div class="card prod">' +
+      '<div class="prod-head">' +
+      '<span class="plat" style="color:' + pc + ';background:' + hexA(pc, 0.13) + '">' + esc(c.info.platformName) + '</span>' +
+      srcBadge(c.source) +
+      '<span class="prod-id">ID ' + esc(shortId(c.info.id)) + '</span>' +
+      '<button class="mini-btn" data-act="edit" title="编辑名称与当前价" aria-label="编辑">✎</button>' +
+      '</div>' +
+      '<h2 class="prod-title">' + esc(rec.title) + '</h2>' +
+      '<div class="prod-price">' +
+      '<div class="now"><span class="cur">¥</span>' + money(a.cur) + '</div>' +
+      '<div class="vs">' +
+      '<span class="chip ' + diffCls + '">' + (diffMin >= 0 ? '比最低高 ¥' + money(diffMin) : '低于最低 ¥' + money(-diffMin)) + '</span>' +
+      '<span class="tiny">' + (a.fromMin >= 0 ? '+' : '') + a.fromMin.toFixed(1) + '% · 处于 ' + Math.round(a.pos * 100) + '% 价位</span>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+
+    // --- 判断条 ---
+    html +=
+      '<div class="verdict ' + v.tone + '">' +
+      '<div class="vic">' + VI[v.tone] + '</div>' +
+      '<div><div class="vtitle">' + v.t + '</div>' +
+      '<div class="vsub">' + v.s + (a.fromMin > 0.5 ? ' · 比区间最低高 ' + a.fromMin.toFixed(1) + '%' : '') + '</div></div>' +
+      '</div>';
+
+    // --- 曲线卡 ---
+    html +=
+      '<div class="card chart-card">' +
+      '<div class="card-head"><div><h3>历史价格</h3>' +
+      '<div class="tiny" id="chartMeta" style="margin-top:3px"></div></div>' +
+      '<span class="tiny">按住曲线看单日价</span></div>' +
+      '<div class="seg" id="rangeSeg">' +
+      segBtn(30, '30天') + segBtn(90, '90天') + segBtn(180, '半年') + segBtn(365, '一年') + segBtn(0, '全部') +
+      '</div>' +
+      '<div class="chart-wrap" id="chartWrap"><div id="chartBox"></div><div class="tip" id="tip"></div></div>' +
+      '<div class="chart-foot"><div class="legend" id="legend"></div><div id="chartRange"></div></div>' +
+      '</div>';
+
+    // --- 统计 ---
+    html +=
+      '<div class="grid2">' +
+      stat('历史最低', '¥' + money(a.min), monthDay(a.minT), 'min') +
+      stat('历史最高', '¥' + money(a.max), monthDay(a.maxT)) +
+      stat('价格幅度', '¥' + money(a.spread), '相当于低点的 ' + a.spreadPct.toFixed(1) + '%') +
+      stat('平均价', '¥' + money(Math.round(a.avg)), '中位数 ¥' + money(a.med)) +
+      stat('波动率', a.vol.toFixed(1) + '<small>%</small>', '标准差 / 均价') +
+      stat('低于现价的报价', Math.round(a.pct) + '<small>%</small>', a.below + ' / ' + a.n + ' 天') +
+      '</div>';
+
+    // --- 价格分布 ---
+    html +=
+      '<div class="card">' +
+      '<div class="card-head"><h3>价格分布</h3>' +
+      '<span class="tiny">¥' + money(a.min) + ' — ¥' + money(a.max) + '</span></div>' +
+      histHTML(a) +
+      '<div class="hist-axis"><span>¥' + money(a.min) + '</span><span>¥' + money(a.max) + '</span></div>' +
+      '<div class="range-note">高低价差 <b>¥' + money(a.spread) + '</b>，最低价的 <b>' + a.spreadPct.toFixed(1) + '%</b></div>' +
+      '</div>';
+
+    // --- 目标价 ---
+    html += targetHTML(rec, a);
+
+    if (c.source === 'demo') {
+      html += '<p class="tiny" style="text-align:center;padding:2px 10px 8px;line-height:1.6">' +
+        '以上为演示数据，非真实行情 · <a href="#" data-act="goto-data" style="color:var(--amber)">导入真实数据</a></p>';
+    }
+
+    box.innerHTML = html;
+    paintChart();
+  }
+
+  function segBtn(val, label) {
+    var on = Number(db.settings.range) === val ? ' on' : '';
+    return '<button class="' + on.trim() + '" data-range="' + val + '">' + label + '</button>';
+  }
+
+  function stat(k, v, s) {
+    return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>';
+  }
+
+  function histHTML(a) {
+    var B = 14;
+    var lo = a.min, hi = a.max;
+    var span = hi - lo || 1;
+    var counts = new Array(B).fill(0);
+    a.ps.forEach(function (p) {
+      var i = Math.floor((p - lo) / span * B);
+      counts[clamp(i, 0, B - 1)]++;
+    });
+    var mx = Math.max.apply(null, counts) || 1;
+    var curIdx = clamp(Math.floor((a.cur - lo) / span * B), 0, B - 1);
+    var bars = '';
+    for (var i = 0; i < B; i++) {
+      var h = Math.max(3, counts[i] / mx * 100);
+      bars += '<div class="hbar' + (i === curIdx ? ' hot' : '') + '" style="height:' + h.toFixed(1) + '%"></div>';
+    }
+    var left = (a.cur - lo) / span * 100;
+    var curCls = left < 9 ? ' at-start' : left > 91 ? ' at-end' : '';
+    return '<div class="hist-wrap"><div class="hist">' + bars +
+      '<div class="hist-cur' + curCls + '" style="left:' + left.toFixed(1) + '%"><b>现价</b></div></div></div>';
+  }
+
+  function targetHTML(rec, a) {
+    var t = Number(rec.target);
+    var body;
+    if (t > 0) {
+      var gap = a.cur - t;
+      var ok = gap <= 0;
+      body =
+        '<div class="target-row"><div>' +
+        '<div class="target-val">¥' + money(t) + '</div>' +
+        '<div class="target-st' + (ok ? ' ok' : '') + '">' +
+        (ok ? '已到目标价，可以下手' : '还差 ¥' + money(gap) + '（' + (gap / a.cur * 100).toFixed(1) + '%）') +
+        '</div></div>' +
+        '<button class="ghost-btn" data-act="target">修改</button></div>';
+    } else {
+      body =
+        '<p class="muted">设一个心理价位，回到这里就能看到差多少。</p>' +
+        '<div class="btn-row"><button class="primary" data-act="target">设置目标价</button></div>';
+    }
+    return '<div class="card"><div class="card-head" style="margin-bottom:8px"><h3>目标价</h3>' +
+      (t > 0 ? '<span class="tiny">到价高亮</span>' : '') + '</div>' + body + '</div>';
+  }
+
+  /* ==================== 曲线绘制 ==================== */
+  function niceTick(range, count) {
+    var raw = range / count;
+    if (!(raw > 0)) return 1;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag;
+    var step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+    return step * mag;
+  }
+
+  function paintChart() {
+    var c = state.current;
+    if (!c) return;
+    var box = $('#chartBox');
+    if (!box) return;
+
+    var series = activeSeries(c.series);
+    var n = series.length;
+    if (n < 2) { box.innerHTML = '<div class="tiny" style="padding:24px;text-align:center">数据点太少，无法绘制曲线</div>'; return; }
+
+    var spanDays = Math.round((series[n - 1].t - series[0].t) / DAY) + 1;
+    var meta = $('#chartMeta');
+    if (meta) meta.textContent = '近 ' + spanDays + ' 天 · ' + cnDate(series[0].t) + ' 起';
+
+    var wins = (c.wins || []).filter(function (w) {
+      return w.to >= series[0].t && w.from <= series[n - 1].t;
+    });
+
+    var W = 348, H = 182;
+    var pl = 40, pr = 12, pt = 16, pb = 28;
+    var pw = W - pl - pr, ph = H - pt - pb;
+
+    var lo = Infinity, hi = -Infinity;
+    series.forEach(function (s) { if (s.p < lo) lo = s.p; if (s.p > hi) hi = s.p; });
+    var padY = (hi - lo) * 0.16;
+    if (padY < 1) padY = Math.max(hi * 0.05, 2);
+    lo = Math.max(0, lo - padY);
+    hi = hi + padY;
+
+    var t0 = series[0].t, t1 = series[n - 1].t, tSpan = (t1 - t0) || 1;
+    function X(i) { return pl + (n === 1 ? pw / 2 : (series[i].t - t0) / tSpan * pw); }
+    function Y(v) { return pt + (1 - (v - lo) / (hi - lo)) * ph; }
+
+    var pts = [];
+    for (var i = 0; i < n; i++) pts.push(X(i).toFixed(1) + ',' + Y(series[i].p).toFixed(1));
+    var line = 'M' + pts.join('L');
+    var area = line + 'L' + X(n - 1).toFixed(1) + ',' + (pt + ph) + 'L' + X(0).toFixed(1) + ',' + (pt + ph) + 'Z';
+
+    var g = '';
+    var tickStep = niceTick(hi - lo, 3);
+    var tickStart = Math.ceil(lo / tickStep) * tickStep;
+    var tickCount = Math.floor((hi - tickStart) / tickStep) + 1;
+    for (var tk = 0; tk < tickCount && tk < 6; tk++) {
+      var gv = tickStart + tk * tickStep;
+      var gy = Y(gv).toFixed(1);
+      g += '<line class="gline" x1="' + pl + '" y1="' + gy + '" x2="' + (W - pr) + '" y2="' + gy + '"/>';
+      g += '<text class="glabel" x="' + (pl - 7) + '" y="' + (+gy + 3.2) + '" text-anchor="end">' + axisMoney(gv) + '</text>';
+    }
+
+    var bands = '';
+    wins.forEach(function (w) {
+      var i0 = -1, i1 = -1;
+      for (var j = 0; j < n; j++) {
+        if (series[j].t >= w.from && series[j].t <= w.to) { if (i0 < 0) i0 = j; i1 = j; }
+      }
+      if (i0 < 0) return;
+      var x0 = X(i0), x1 = X(i1) + (pw / Math.max(1, n - 1)) * 0.6;
+      bands += '<rect class="band" x="' + x0.toFixed(1) + '" y="' + pt + '" width="' + Math.max(2, x1 - x0).toFixed(1) + '" height="' + ph + '" rx="1"/>';
+    });
+
+    var minI = 0, maxI = 0;
+    for (var a = 1; a < n; a++) {
+      if (series[a].p < series[minI].p) minI = a;
+      if (series[a].p > series[maxI].p) maxI = a;
+    }
+    var minX = X(minI), minY = Y(series[minI].p);
+    var maxX = X(maxI), maxY = Y(series[maxI].p);
+    var minAnchor = minX < pl + 44 ? 'start' : minX > W - pr - 44 ? 'end' : 'middle';
+    var minDx = minAnchor === 'start' ? 4 : minAnchor === 'end' ? -4 : 0;
+    var minTy = minY + 15 > H - 4 ? minY - 8 : minY + 15;
+    var maxAnchor = maxX < pl + 44 ? 'start' : maxX > W - pr - 44 ? 'end' : 'middle';
+    var maxDx = maxAnchor === 'start' ? 4 : maxAnchor === 'end' ? -4 : 0;
+    var maxTy = maxY - 9 < pt + 2 ? maxY + 14 : maxY - 9;
+
+    var markers =
+      '<circle class="dot-max" cx="' + maxX.toFixed(1) + '" cy="' + maxY.toFixed(1) + '" r="3.4"/>' +
+      '<text class="plabel max" x="' + (maxX + maxDx).toFixed(1) + '" y="' + maxTy.toFixed(1) + '" text-anchor="' + maxAnchor + '">最高 ¥' + money(series[maxI].p) + '</text>' +
+      '<circle class="dot-min" cx="' + minX.toFixed(1) + '" cy="' + minY.toFixed(1) + '" r="3.4"/>' +
+      '<text class="plabel min" x="' + (minX + minDx).toFixed(1) + '" y="' + minTy.toFixed(1) + '" text-anchor="' + minAnchor + '">最低 ¥' + money(series[minI].p) + '</text>';
+
+    var lx = X(n - 1), ly = Y(series[n - 1].p);
+    var nowDot =
+      '<circle class="pulse" cx="' + lx.toFixed(1) + '" cy="' + ly.toFixed(1) + '" r="7.5"/>' +
+      '<circle class="dot-now" cx="' + lx.toFixed(1) + '" cy="' + ly.toFixed(1) + '" r="3.4"/>';
+
+    var ticks = [0, Math.round((n - 1) / 3), Math.round((n - 1) * 2 / 3), n - 1];
+    var xl = '';
+    ticks.forEach(function (idx, ti) {
+      var anchor = ti === 0 ? 'start' : ti === ticks.length - 1 ? 'end' : 'middle';
+      var tx = ti === 0 ? pl : ti === ticks.length - 1 ? W - pr : X(idx);
+      xl += '<text class="xlabel" x="' + tx.toFixed(1) + '" y="' + (H - 7) + '" text-anchor="' + anchor + '">' + md(series[idx].t) + '</text>';
+    });
+
+    var svg =
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="历史价格曲线">' +
+      '<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="var(--mint)" stop-opacity=".30"/>' +
+      '<stop offset="1" stop-color="var(--mint)" stop-opacity="0"/>' +
+      '</linearGradient></defs>' +
+      g + bands +
+      '<path class="area" d="' + area + '"/>' +
+      '<path class="line" d="' + line + '"/>' +
+      markers + nowDot +
+      '<g class="cross" id="cross" opacity="0"><line id="crossLine" y1="' + pt + '" y2="' + (pt + ph) + '"/>' +
+      '<circle id="crossDot" r="3.2"/></g>' +
+      xl +
+      '</svg>';
+
+    box.innerHTML = svg;
+
+    // 图例 / 范围
+    var leg = $('#legend');
+    if (leg) {
+      var names = [];
+      wins.forEach(function (w) { if (names.indexOf(w.name) < 0) names.push(w.name); });
+      leg.innerHTML =
+        '<span><i class="m"></i>价格曲线</span>' +
+        '<span><i class="a"></i>最高价</span>' +
+        (names.length ? '<span><i class="b"></i>大促：' + esc(names.slice(0, 3).join(' / ')) + '</span>' : '');
+    }
+    var cr = $('#chartRange');
+    if (cr) cr.textContent = n + ' 个报价点';
+
+    // 交互
+    var svgEl = box.querySelector('svg');
+    var cross = box.querySelector('#cross');
+    var crossLine = box.querySelector('#crossLine');
+    var crossDot = box.querySelector('#crossDot');
+    var tip = $('#tip');
+    var wrap = $('#chartWrap');
+    if (!svgEl || !tip || !wrap) return;
+
+    function onMove(ev) {
+      var r = svgEl.getBoundingClientRect();
+      if (!r.width) return;
+      var wx = (ev.clientX - r.left) / r.width * W;
+      var tTarget = t0 + (wx - pl) / pw * tSpan;
+      var idx = 0, bestD = Infinity;
+      for (var ii = 0; ii < n; ii++) {
+        var dv = Math.abs(series[ii].t - tTarget);
+        if (dv < bestD) { bestD = dv; idx = ii; }
+      }
+      idx = clamp(idx, 0, n - 1);
+      var px = X(idx), py = Y(series[idx].p);
+
+      cross.setAttribute('opacity', '1');
+      crossLine.setAttribute('x1', px.toFixed(1));
+      crossLine.setAttribute('x2', px.toFixed(1));
+      crossDot.setAttribute('cx', px.toFixed(1));
+      crossDot.setAttribute('cy', py.toFixed(1));
+
+      var p = series[idx].p;
+      var d = a_pct(p, series[n - 1].p);
+      tip.innerHTML =
+        '<div class="tip-d">' + cnDate(series[idx].t) + '</div>' +
+        '<div class="tip-p">¥' + money(p) + '</div>' +
+        '<div class="tip-s">' + (Math.abs(d) < 0.05 ? '与现价持平' : (d < 0 ? '比现价低 ' : '比现价高 ') + Math.abs(d).toFixed(1) + '%') + '</div>';
+      tip.classList.add('show');
+
+      var leftPx = px / W * r.width;
+      tip.style.left = leftPx + 'px';
+      tip.style.transform = leftPx > r.width * 0.6 ? 'translateX(calc(-100% - 8px))' : 'translateX(8px)';
+    }
+    function onLeave() {
+      cross.setAttribute('opacity', '0');
+      tip.classList.remove('show');
+    }
+    svgEl.addEventListener('pointermove', onMove);
+    svgEl.addEventListener('pointerdown', onMove);
+    svgEl.addEventListener('pointerleave', onLeave);
+    svgEl.addEventListener('pointercancel', onLeave);
+  }
+
+  function a_pct(p, cur) { return cur > 0 ? (p - cur) / cur * 100 : 0; }
+
+  /* ==================== 记录 ==================== */
+  function sparkline(series) {
+    var vs = series.slice(-45).map(function (s) { return s.p; });
+    if (vs.length < 2) return '';
+    var lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+    var w = 44, h = 20, span = hi - lo || 1;
+    var pts = vs.map(function (v, i) {
+      var x = i / (vs.length - 1) * w;
+      var y = h - 2 - (v - lo) / span * (h - 4);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    return '<svg class="spark" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+      '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--mint)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+
+  function renderRecords() {
+    var box = $('#recordsList');
+    var list = db.records.slice().sort(function (a, b) { return b.ts - a.ts; });
+    if (!list.length) {
+      box.innerHTML = '<div class="card empty" style="margin-top:8px">' +
+        '<svg class="art" viewBox="0 0 132 82" fill="none">' +
+        '<rect x="26" y="14" width="80" height="54" rx="10" stroke="currentColor" stroke-opacity=".16" stroke-width="1.6"/>' +
+        '<path d="M26 30h80" stroke="currentColor" stroke-opacity=".12" stroke-width="1.4"/>' +
+        '<circle cx="35" cy="22" r="2.2" fill="currentColor" fill-opacity=".22"/>' +
+        '<path d="M40 46l8-7 7 5 9-11 7 6" stroke="#43e0b0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".8"/>' +
+        '</svg>' +
+        '<h3>还没有查询记录</h3>' +
+        '<p>查询过的商品会保存在这里，方便随时回看价格走势。</p>' +
+        '</div>';
+      return;
+    }
+    var html = '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 4px 10px">' +
+      '<span class="tiny">共 ' + list.length + ' 个商品 · 按最近查询排序</span>' +
+      '<button class="ghost-btn" style="padding:5px 9px;font-size:10.5px" data-act="clear">清空</button></div>';
+
+    list.forEach(function (rec, i) {
+      var built = seriesFor(rec.key);
+      var series = built.series;
+      if (rec.current && series.length) {
+        series = series.slice(0, -1).concat([{ t: series[series.length - 1].t, p: rec.current }]);
+      }
+      var a = analyze(series);
+      var pc = PLAT[rec.platform] ? PLAT[rec.platform].color : '#888';
+      var diff = rec.target > 0 ? (a.cur - rec.target) : (a.cur - a.min);
+      var cls = diff < -0.5 ? 'down' : diff > 0.5 ? 'up' : 'flat';
+      var label = rec.target > 0
+        ? (diff <= 0 ? '已到目标价' : '距目标 ¥' + money(diff))
+        : '最低 ¥' + money(a.min);
+
+      html +=
+        '<div class="rec" data-key="' + esc(rec.key) + '" style="animation-delay:' + (i * 0.03) + 's">' +
+        '<div class="rec-main">' +
+        '<div class="rec-top">' +
+        '<span class="plat" style="color:' + pc + ';background:' + hexA(pc, 0.13) + '">' + esc(PLAT[rec.platform] ? PLAT[rec.platform].name : '商品') + '</span>' +
+        '<span class="rec-title">' + esc(rec.title) + '</span>' +
+        (rec.source === 'demo' ? '<span class="badge demo" style="padding:1px 4px;font-size:9px">示例</span>' : '') +
+        '</div>' +
+        '<div class="rec-meta">' + label + ' · ' + relTime(rec.ts) + '</div>' +
+        '</div>' +
+        sparkline(series) +
+        '<div class="rec-side">' +
+        '<div class="rec-price">¥' + money(a.cur) + '</div>' +
+        '<div class="rec-delta ' + cls + '">' + (diff >= 0 ? '较最低 +' : '较最低 ' ) + money(Math.abs(diff) < 0.5 ? 0 : diff) + '</div>' +
+        '</div>' +
+        '<button class="rec-del" data-del="' + esc(rec.key) + '" title="删除" aria-label="删除">×</button>' +
+        '</div>';
+    });
+    box.innerHTML = html;
+  }
+
+  /* ==================== 弹层 / 提示 ==================== */
+  var sheet = $('#sheet'), sheetBk = $('#sheetBk'), sheetBody = $('#sheetBody');
+  function openSheet(html) {
+    sheetBody.innerHTML = html;
+    sheet.classList.add('open');
+    sheetBk.classList.add('open');
+  }
+  function closeSheet() {
+    sheet.classList.remove('open');
+    sheetBk.classList.remove('open');
+  }
+  sheetBk.addEventListener('click', closeSheet);
+  sheet.addEventListener('click', function (e) {
+    if (e.target.hasAttribute('data-close')) closeSheet();
+  });
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+
+  function editSheet() {
+    var c = state.current;
+    if (!c) return;
+    openSheet(
+      '<h3>编辑商品</h3>' +
+      '<p class="muted" style="margin-top:2px">名称只保存在本地；填入真实当前价后，价位判断会一起更新。</p>' +
+      '<label class="field"><span>商品名称</span><input id="fTitle" type="text" maxlength="60" value="' + esc(c.rec.title) + '" /></label>' +
+      '<label class="field"><span>当前价（元）</span><input id="fPrice" type="number" inputmode="decimal" min="0" step="0.01" value="' + c.rec.current + '" /></label>' +
+      '<div class="btn-row"><button class="ghost-btn" data-close>取消</button><button class="primary" id="fSave">保存</button></div>'
+    );
+    $('#fSave').addEventListener('click', function () {
+      var t = $('#fTitle').value.trim();
+      var p = Number($('#fPrice').value);
+      if (t) c.rec.title = t;
+      if (isFinite(p) && p > 0) c.rec.current = p;
+      saveDB();
+      closeSheet();
+      applyQuery(c.info, { series: c.series, wins: c.wins, source: c.source, sim: c.sim });
+      renderRecords();
+      toast('已更新');
+    });
+  }
+
+  function targetSheet() {
+    var c = state.current;
+    if (!c) return;
+    var a = analyze(c.series);
+    openSheet(
+      '<h3>目标价</h3>' +
+      '<p class="muted" style="margin-top:2px">参考：历史最低 ¥' + money(a.min) + '，均价 ¥' + money(a.avg) + '。</p>' +
+      '<label class="field"><span>心理价位（元）</span><input id="fTarget" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 ' + Math.round(a.min * 1.05) + '" value="' + (c.rec.target || '') + '" /></label>' +
+      '<div class="btn-row"><button class="ghost-btn" data-close>取消</button><button class="primary" id="tSave">保存</button></div>' +
+      (c.rec.target > 0 ? '<button class="danger-btn" id="tClear">取消目标价</button>' : '')
+    );
+    $('#tSave').addEventListener('click', function () {
+      var v = Number($('#fTarget').value);
+      if (!isFinite(v) || v <= 0) { toast('请输入有效价格'); return; }
+      c.rec.target = v;
+      saveDB(); closeSheet(); renderHome(); renderRecords();
+      toast(v <= a.cur ? '已经低于目标价了' : '目标价已保存');
+    });
+    var tc = $('#tClear');
+    if (tc) tc.addEventListener('click', function () {
+      c.rec.target = null; saveDB(); closeSheet(); renderHome(); renderRecords();
+    });
+  }
+
+  /* ==================== 数据页逻辑 ==================== */
+  function doImport() {
+    var ta = $('#importText');
+    var txt = ta.value;
+    if (!txt.trim()) { toast('先粘贴或选择一份数据'); return; }
+    var list;
+    try { list = parseImportText(txt); }
+    catch (e) { toast(e.message || '解析失败'); return; }
+    if (!state.current) { toast('请先在「查询」里打开一个商品'); return; }
+
+    var key = state.current.rec.key;
+    db.imported[key] = { series: list.map(function (x) { return { date: cnDate(x.t), price: x.p }; }), ts: Date.now() };
+    state.current.rec.source = 'imported';
+    state.current.rec.current = list[list.length - 1].p;
+    saveDB();
+    applyQuery(state.current.info, { series: list, wins: [], source: 'imported', sim: null });
+    renderRecords();
+    toast('已导入 ' + list.length + ' 条报价');
+  }
+
+  function clearAll() {
+    openSheet(
+      '<h3>清除本地数据？</h3>' +
+      '<p class="muted">查询记录、目标价与导入的价格曲线都会被删除，且无法恢复。</p>' +
+      '<div class="btn-row"><button class="ghost-btn" data-close>取消</button>' +
+      '<button class="primary danger-solid" id="cOk">确认清除</button></div>'
+    );
+    $('#cOk').addEventListener('click', function () {
+      db = clone(DEFAULTS);
+      saveDB();
+      state.current = null;
+      closeSheet();
+      renderHome();
+      renderRecords();
+      switchTab('home');
+      toast('已清除本地数据');
+    });
+  }
+
+  /* ==================== 主题 / 标签 ==================== */
+  function applyTheme() {
+    var t = db.settings.theme;
+    var dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    $('#icoSun').style.display = dark ? 'block' : 'none';
+    $('#icoMoon').style.display = dark ? 'none' : 'block';
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0a0c11' : '#eef1f7');
+  }
+
+  function switchTab(name) {
+    state.tab = name;
+    $$('.screen').forEach(function (s) { s.classList.toggle('active', s.id === 'scr-' + name); });
+    $$('.tab').forEach(function (t) { t.classList.toggle('on', t.dataset.tab === name); });
+    if (name === 'records') renderRecords();
+  }
+
+  /* ==================== 事件绑定 ==================== */
+  function bind() {
+    $('#goBtn').addEventListener('click', function () {
+      var v = $('#urlInput').value;
+      if (!v.trim()) { toast('请先粘贴商品链接'); return; }
+      runQuery(v);
+    });
+    $('#urlInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('#goBtn').click(); }
+    });
+    $('#pasteBtn').addEventListener('click', function () {
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        toast('当前环境不支持读取剪贴板，请手动粘贴');
+        return;
+      }
+      navigator.clipboard.readText().then(function (t) {
+        if (!t) { toast('剪贴板是空的'); return; }
+        $('#urlInput').value = t.trim();
+        runQuery(t);
+      }).catch(function () { toast('无法读取剪贴板，请手动粘贴（Ctrl+V）'); });
+    });
+
+    $('#themeBtn').addEventListener('click', function () {
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      db.settings.theme = dark ? 'light' : 'dark';
+      saveDB();
+      applyTheme();
+    });
+
+    $$('.tab').forEach(function (t) {
+      t.addEventListener('click', function () { switchTab(t.dataset.tab); });
+    });
+
+    // 结果区委托
+    $('#result').addEventListener('click', function (e) {
+      var seg = e.target.closest('[data-range]');
+      if (seg) {
+        db.settings.range = Number(seg.dataset.range);
+        saveDB();
+        var sc = $('#scr-home').scrollTop;
+        renderHome();
+        $('#scr-home').scrollTop = sc;
+        return;
+      }
+      var act = e.target.closest('[data-act]');
+      if (!act) return;
+      e.preventDefault();
+      var a = act.dataset.act;
+      if (a === 'edit') editSheet();
+      else if (a === 'target') targetSheet();
+      else if (a === 'demo') runQuery(SAMPLE);
+      else if (a === 'goto-data') switchTab('data');
+    });
+
+    // 记录区委托
+    $('#recordsList').addEventListener('click', function (e) {
+      var del = e.target.closest('[data-del]');
+      if (del) {
+        e.stopPropagation();
+        var key = del.dataset.del;
+        db.records = db.records.filter(function (r) { return r.key !== key; });
+        delete db.imported[key];
+        if (state.current && state.current.rec.key === key) state.current = null;
+        saveDB(); renderRecords(); renderHome();
+        toast('已删除');
+        return;
+      }
+      var clr = e.target.closest('[data-act="clear"]');
+      if (clr) { clearAll(); return; }
+      var row = e.target.closest('[data-key]');
+      if (row) {
+        var rec = db.records.filter(function (r) { return r.key === row.dataset.key; })[0];
+        if (rec) runQuery(rec.url);
+      }
+    });
+
+    $('#importBtn').addEventListener('click', doImport);
+    $('#importFile').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        $('#importText').value = String(rd.result || '');
+        toast('已读入文件，点「导入到当前商品」生效');
+      };
+      rd.readAsText(f);
+    });
+    $('#clearBtn').addEventListener('click', clearAll);
+
+    // 时钟
+    function tick() {
+      var d = new Date();
+      $('#clock').textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+    tick();
+    setInterval(tick, 20000);
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (db.settings.theme === 'auto') applyTheme();
+    });
+  }
+
+  /* ==================== 启动 ==================== */
+  function boot() {
+    var qs = new URLSearchParams(location.search);
+    var forced = qs.get('theme');
+    if (forced === 'light' || forced === 'dark') db.settings.theme = forced;
+
+    applyTheme();
+    bind();
+    switchTab('home');
+
+    var first = db.records[0];
+    if (first) {
+      var built = seriesFor(first.key);
+      var info = {
+        key: first.key, platform: first.platform, id: first.id, url: first.url,
+        platformName: PLAT[first.platform] ? PLAT[first.platform].name : '商品',
+        short: false, title: first.title
+      };
+      applyQuery(info, built);
+    } else {
+      renderHome();
+      runQuery(SAMPLE, { silent: true }).then(function (ok) {
+        if (ok) toast('已载入示例链接（演示数据），换一个真实链接试试');
+      });
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
